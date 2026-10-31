@@ -21,7 +21,6 @@ class DocumentGrade(BaseModel):
 class HallucinationGrade(BaseModel):
     binary_score: str = Field(description="Answer supported by facts: 'yes' or 'no'")
 
-# LangGraph State Schema
 class GraphState(TypedDict):
     question: str
     rewritten_question: str
