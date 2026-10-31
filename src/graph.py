@@ -13,10 +13,9 @@ from src.config import LLM_MODEL_NAME
 # In-memory session chat history store
 SESSION_MEMORY: Dict[str, List[Dict[str, str]]] = {}
 
-# Initialize Gemini Flash model via LangChain integration
+# Initialize Gemini model via LangChain integration
 llm = ChatGoogleGenerativeAI(
     model=LLM_MODEL_NAME,
-    temperature=0,
 )
 
 def get_text(response) -> str:

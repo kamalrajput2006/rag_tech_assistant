@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from src.models import QueryRequest, IngestRequest, FeedbackRequest
-from src.ingestion import ingest_document, get_vector_store
+from src.ingestion import ingest_document, get_vector_store, clear_vector_store
 from src.graph import build_graph, SESSION_MEMORY
 
 app = FastAPI(title="RAG Technical Documentation Assistant", version="1.0")
@@ -53,15 +53,25 @@ def ingest_endpoint(req: IngestRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/clear")
+def clear_endpoint():
+    try:
+        count = clear_vector_store()
+        SESSION_MEMORY.clear()
+        return {"status": "success", "cleared_chunks": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/documents")
 def list_documents():
     try:
         vector_store = get_vector_store()
         data = vector_store.get()
-        documents = list(set(data.get("metadatas", [])))
-        return {"documents": documents}
+        metas = data.get("metadatas", [])
+        sources = sorted(list(set(m.get("source") for m in metas if isinstance(m, dict) and "source" in m)))
+        return {"documents": sources, "total_chunks": len(data.get("ids", []))}
     except Exception as e:
-        return {"documents": [], "error": str(e)}
+        return {"documents": [], "total_chunks": 0, "error": str(e)}
 
 @app.post("/feedback")
 def feedback_endpoint(req: FeedbackRequest):
