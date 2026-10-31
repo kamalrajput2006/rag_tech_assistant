@@ -5,7 +5,6 @@ from langchain_community.vectorstores import Chroma
 from src.config import CHROMA_PERSIST_DIRECTORY, EMBEDDING_MODEL_NAME
 
 def get_vector_store():
-    
     embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL_NAME)
     vector_store = Chroma(
         persist_directory=CHROMA_PERSIST_DIRECTORY,
@@ -32,5 +31,5 @@ def ingest_document(source_type: str, path_or_url: str):
     
     vector_store = get_vector_store()
     vector_store.add_documents(splits)
-    vector_store.persist()
+    # Docs are automatically persisted in Chroma 0.4.x+
     return len(splits)

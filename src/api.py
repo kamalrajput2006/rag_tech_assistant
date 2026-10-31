@@ -41,6 +41,8 @@ def query_endpoint(req: QueryRequest):
             "session_id": session_id
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ingest")

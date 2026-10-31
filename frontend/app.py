@@ -41,8 +41,8 @@ if prompt := st.chat_input("Ask a technical question..."):
             res = requests.post(f"{API_URL}/query", json={"question": prompt, "session_id": st.session_state.session_id})
             if res.status_code == 200:
                 data = res.json()
-                answer = data["answer"]
-                sources = data.split(",") if "sources" in data else data.get("sources", [])
+                answer = data.get("answer", "No answer returned.")
+                sources = data.get("sources", [])
                 
                 st.markdown(answer)
                 if sources:
