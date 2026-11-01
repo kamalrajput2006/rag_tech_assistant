@@ -1,8 +1,199 @@
-What is Deed of Hypothecation HP?
-A deed of hypothecation is a legal document encapsulating a transaction between a lender and borrower, wherein the borrower offers a movable asset as collateral to secure a loan. Hypothecation of a movable asset does not include giving up any ownership rights such as title or possession. However, a deed of hypothecation grants the lender a right to seize the asset upon the borrower’s failure to meet the terms of the deed.
+RAG Technical Documentation Assistant
 
-Why is Deed of Hypothecation HP required?
-A deed of hypothecation is required to cement the terms upon which the borrower and lender agree to the hypothecation of a movable asset against a loan. The deed ensures that the parties are aware of their rights and liabilities and have a document which can be enforced in a court of law.
+Project overview
+The RAG Technical Documentation Assistant is an intelligent question-answering system built for technical documentation and knowledge retrieval. It combines retrieval-augmented generation (RAG), conversational memory, vector search, and web fallback to answer user questions using trusted source context instead of relying purely on model memory.
 
-What should a Deed of Hypothecation HP cover?
-A deed of hypothecation should include details of the parties, details of the asset offered as collateral and the terms upon which the loan has been advanced by the lender. The deed should include a recital regarding ownership of the movable asset by the borrower & should also lay down the respective rights and liabilities of both the parties.
+This project is designed to help users ask questions about internal docs, local text files, URLs, and technical knowledge bases while keeping answers grounded in real retrieved content. The application uses a LangGraph workflow with Gemini models for reasoning and embeddings, ChromaDB for document storage, a FastAPI backend for service endpoints, and a Streamlit frontend for user interaction.
+
+Problem it solves
+Typical RAG systems often fail when:
+- The user asks a follow-up question that depends on previous context.
+- The retrieved documents do not contain the answer.
+- The language model hallucinates facts not present in the source material.
+- The system cannot clearly cite which document or chunk supported the answer.
+
+This project addresses those problems with:
+- Context-aware query rewriting using chat history
+- Vector retrieval over a local Chroma database
+- Optional Tavily web search for missing information
+- Hallucination checking before final answers are returned
+- Source citation support for answer verification
+
+Core features
+- Multi-turn conversational memory for follow-up questions
+- Query rewriting for better retrieval
+- Google Gemini integration for embeddings and generation
+- ChromaDB-powered local document indexing
+- Fallback online web search when local documents are insufficient
+- Built-in source tracking and citations
+- Streamlit UI for ingestion and document chat
+- FastAPI REST API for query, ingestion, document listing, and feedback
+
+Technology stack
+- Python
+- FastAPI
+- Streamlit
+- LangChain
+- LangGraph
+- Google Generative AI (Gemini)
+- ChromaDB
+- Tavily Search API
+- Pydantic
+- python-dotenv
+
+Project structure
+project/
+├── README.md
+├── main.py
+├── requirements.txt
+├── chroma_db/
+│   └── local Chroma vector database files
+├── data/
+│   └── sample_docs.txt      # Sample document for ingestion and testing
+├── frontend/
+│   └── app.py               # Streamlit interface
+├── src/
+│   ├── __init__.py
+│   ├── api.py               # FastAPI endpoints
+│   ├── config.py            # Environment and app configuration
+│   ├── graph.py             # LangGraph workflow and nodes
+│   ├── ingestion.py         # Loading, splitting, storing documents
+│   └── models.py            # Request and GraphState models
+
+Architecture and workflow
+The application runs a graph-based pipeline that processes each user question in stages:
+
+1. Query analysis
+The system reads the current question and previous chat history. If there is relevant context in the conversation, it rewrites the user question into a more precise search query.
+
+2. Retrieval
+The rewritten query is searched against the Chroma vector store using semantic embeddings. The retriever fetches the top relevant document chunks.
+
+3. Document grading
+The workflow checks whether relevant documents were found. If documents are missing, the system can retry with revised retrieval or fall back to web search.
+
+4. Web fallback
+If no suitable local documents match the query, the system queries Tavily Search to fetch external knowledge and uses it as additional context.
+
+5. Generation
+The final answer is generated using only the retrieved context. The model is instructed to answer accurately and include source references where possible.
+
+6. Hallucination check
+The answer is validated against the provided context to detect unsupported claims before returning it to the user.
+
+Data flow
+The backend service receives requests from the Streamlit frontend or external clients. The request is sent to the graph application, which invokes the LangGraph workflow. The system stores chat memory per session in an in-memory dictionary and returns an answer plus source metadata.
+
+Environment configuration
+The project relies on environment variables defined in a .env file.
+
+Required keys:
+- GOOGLE_API_KEY: API key for Google Gemini
+- TAVILY_API_KEY: API key for Tavily web search fallback
+
+Configuration values are loaded using python-dotenv from src/config.py.
+
+Important configuration settings:
+- CHROMA_PERSIST_DIRECTORY = ./chroma_db
+- EMBEDDING_MODEL_NAME = models/gemini-embedding-001
+- LLM_MODEL_NAME = gemini-3.5-flash-lite
+
+Setup guide
+1. Open the project directory in a terminal.
+2. Create and activate a virtual environment.
+   Windows PowerShell:
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+
+   macOS/Linux:
+   python3 -m venv venv
+   source venv/bin/activate
+
+3. Install dependencies:
+   pip install -r requirements.txt
+
+4. Create a .env file with the required keys:
+   GOOGLE_API_KEY=your_google_api_key
+   TAVILY_API_KEY=your_tavily_api_key
+
+5. Ensure the data folder contains a source file such as data/sample_docs.txt.
+
+Running the application
+Backend
+Open one terminal session and run:
+uvicorn src.api:app --reload --port 8000
+
+This starts the FastAPI backend. The main API is exposed at:
+- http://localhost:8000
+- Swagger docs: http://localhost:8000/docs
+
+Frontend
+Open a second terminal session and run:
+streamlit run frontend/app.py
+
+The Streamlit UI will open in a browser at:
+- http://localhost:8501
+
+Using the app
+From the Streamlit sidebar:
+- Select Source Type: file or url
+- Enter a path or URL for the document to index
+- Click Ingest Document
+- The system splits the document into chunks and stores them in ChromaDB
+
+Then use the chat input to ask questions about the indexed content. The app will reply using context from the indexed documents and, if necessary, use a web fallback.
+
+The sidebar also includes:
+- Indexed Documents: list of currently stored sources
+- Total chunks stored: number of chunks in the vector database
+- Clear DB: removes vector store data and resets chat memory
+
+API endpoints
+The FastAPI backend exposes the following endpoints:
+
+POST /query
+Description: Sends a user question to the RAG graph and returns an answer with sources.
+Example payload:
+{"question": "What is this project about?", "session_id": "user_1"}
+
+POST /ingest
+Description: Loads a file or URL into the vector database.
+Example payload:
+{"source_type": "file", "path_or_url": "data/sample_docs.txt"}
+
+GET /documents
+Description: Lists the document sources currently indexed in the vector store.
+
+POST /clear
+Description: Clears the vector database and session memory.
+
+POST /feedback
+Description: Accepts feedback about the generated answer.
+Example payload:
+{"session_id": "user_1", "rating": "thumbs_up", "comment": "Helpful answer"}
+
+Important implementation notes
+- Chat history is stored in memory by session_id within src/graph.py.
+- Vector data is persisted under the local chroma_db directory.
+- Existing chunks for a source are removed before re-indexing to avoid stale content.
+- The retrieval pipeline is optimized to avoid excessive LLM calls; document grading is intentionally lightweight when free-tier limits are a concern.
+- The project uses local persistence for the Chroma vector store and in-memory session tracking. This is suitable for local development and lightweight demonstration usage.
+
+Typical workflow example
+1. Start the backend and frontend.
+2. Ingest data/sample_docs.txt.
+3. Ask: "What is this project designed to do?"
+4. The system rewrites the question, retrieves relevant chunks, and returns a grounded answer.
+5. Ask a follow-up like: "How does it handle missing information?" to observe conversational memory and context-aware search.
+
+Troubleshooting
+- If the app cannot connect to the backend, verify that uvicorn is running on port 8000.
+- If no answer is returned, check that the Google API key and Tavily API key are valid.
+- If the vector store is empty, ingest a document before asking questions.
+- If old documents remain, use the Clear DB button or the /clear endpoint.
+- If the app reports model errors, confirm that the required Python packages are installed and the .env file is present.
+
+Summary
+This project is a local-first, agentic RAG application for technical documentation. It emphasizes grounded responses, document-level retrieval, conversational context, and strong answer validation. It is especially useful for building searchable knowledge assistants over technical documents, internal docs, or curated information sources.
+
+The repository is intentionally simple to run locally and can be extended for larger document collections, alternative LLM providers, and richer user workflows.
