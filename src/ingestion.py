@@ -3,10 +3,13 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader, UnstructuredURLLoader
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from src.config import CHROMA_PERSIST_DIRECTORY, EMBEDDING_MODEL_NAME
+from src.config import CHROMA_PERSIST_DIRECTORY, EMBEDDING_MODEL_NAME, get_google_api_key
 
 def get_vector_store():
-    embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model=EMBEDDING_MODEL_NAME,
+        google_api_key=get_google_api_key(),
+    )
     vector_store = Chroma(
         persist_directory=CHROMA_PERSIST_DIRECTORY,
         embedding_function=embeddings

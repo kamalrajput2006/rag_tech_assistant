@@ -7,16 +7,18 @@ from langgraph.graph import StateGraph, END
 
 from src.models import GraphState, DocumentGrade, HallucinationGrade
 from src.ingestion import get_vector_store
-from src.config import LLM_MODEL_NAME
+from src.config import LLM_MODEL_NAME, get_google_api_key
 
 
 # In-memory session chat history store
 SESSION_MEMORY: Dict[str, List[Dict[str, str]]] = {}
 
-# Initialize Gemini model via LangChain integration
-llm = ChatGoogleGenerativeAI(
-    model=LLM_MODEL_NAME,
-)
+
+def get_llm():
+    return ChatGoogleGenerativeAI(
+        model=LLM_MODEL_NAME,
+        google_api_key=get_google_api_key(),
+    )
 
 def get_text(response) -> str:
     content = response.content
@@ -43,7 +45,7 @@ def query_analysis_node(state: GraphState):
         ("system", "You are an AI assistant helping rewrite technical queries for vector search, incorporating chat context if relevant."),
         ("user", "Chat History: {chat_history}\n\nOriginal Question: {question}\n\nProvide a rewritten, clear, keyword-rich standalone search query.")
     ])
-    chain = prompt | llm
+    chain = prompt | get_llm()
     response = chain.invoke({"chat_history": chat_history, "question": question})
     rewritten = get_text(response).strip()
 
@@ -95,7 +97,7 @@ def generation_node(state: GraphState):
         "You are a technical documentation assistant. Answer the user question accurately using ONLY the provided context. Include source citations.\n\n"
         "Context:\n{context}\n\nQuestion: {question}"
     )
-    chain = prompt | llm
+    chain = prompt | get_llm()
     response = chain.invoke({"context": context, "question": question})
 
     return {"generation": get_text(response), "sources": sources}
@@ -114,7 +116,7 @@ def hallucination_check_node(state: GraphState):
         "Context:\n{context}\n\nGeneration:\n{generation}\n"
         "Is the answer grounded in the context? Answer strictly with yes or no.\n{format_instructions}"
     )
-    chain = prompt | llm | parser
+    chain = prompt | get_llm() | parser
     try:
         score = chain.invoke({
             "context": context,

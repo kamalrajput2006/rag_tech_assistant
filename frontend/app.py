@@ -5,7 +5,11 @@ import requests
 st.set_page_config(page_title="Technical Doc Assistant", layout="centered")
 st.title("📚 RAG Technical Documentation Assistant")
 
-API_URL = "http://localhost:8000"
+# Configure Backend API URL from environment variable or Streamlit secrets
+API_URL = os.getenv("API_URL")
+if not API_URL and hasattr(st, "secrets") and "API_URL" in st.secrets:
+    API_URL = st.secrets["API_URL"]
+API_URL = (API_URL or "http://localhost:8000").rstrip("/")
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = "streamlit_user_session"
@@ -32,7 +36,11 @@ with st.sidebar:
                         st.success(f"Indexed {res.json().get('chunks_indexed')} chunks.")
                         st.rerun()
                     else:
-                        st.error(res.text)
+                        try:
+                            detail = res.json().get("detail", res.text)
+                        except ValueError:
+                            detail = res.text
+                        st.error(detail)
                 except Exception as e:
                     st.error(f"Failed to connect: {e}")
 
@@ -92,6 +100,10 @@ if prompt := st.chat_input("Ask a question about the indexed content..."):
                     
                     st.session_state.messages.append({"role": "assistant", "content": answer})
                 else:
-                    st.error("Error communicating with backend API.")
+                    try:
+                        detail = res.json().get("detail", res.text)
+                    except ValueError:
+                        detail = res.text
+                    st.error(f"Backend error: {detail}")
             except Exception as e:
                 st.error(f"Connection error: {e}")
